@@ -3,6 +3,11 @@ import inspect
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
+
+try:
+    from prompt_toolkit.completion.nested import NestedCompleter
+except ImportError:
+    from aiocmd.nested_completer import NestedCompleter
 from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
 from prompt_toolkit.patch_stdout import patch_stdout
 
@@ -52,7 +57,12 @@ class PromptToolkitCmd:
                     print("Command %s not found!" % args[0])
 
     def _make_completer(self):
-        return WordCompleter(self.command_list)
+        return NestedCompleter({com: self._completer_for_command(com) for com in self.command_list})
+
+    def _completer_for_command(self, command):
+        if not hasattr(self, "_%s_completions" % command):
+            return WordCompleter([])
+        return getattr(self, "_%s_completions" % command)()
 
     def _get_command(self, command):
         if command in self.aliases:

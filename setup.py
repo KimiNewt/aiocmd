@@ -1,7 +1,7 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='aiocmd',
-      py_modules=['aiocmd'],
+      packages=find_packages("."),
       version='0.1',
       author='Dor Green',
       author_email='dorgreen1@gmail.com',
