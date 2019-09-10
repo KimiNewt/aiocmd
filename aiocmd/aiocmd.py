@@ -1,8 +1,10 @@
 import asyncio
 import inspect
+import signal
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.key_binding import KeyBindings
 
 try:
     from prompt_toolkit.completion.nested import NestedCompleter
@@ -18,43 +20,79 @@ class ExitPromptException(Exception):
 
 class PromptToolkitCmd:
     ATTR_START = "do_"
-    PROMPT = "$ "
+    prompt = "$ "
     doc_header = "Documented commands:"
     aliases = {"?": "help", "exit": "quit"}
 
-    def __init__(self):
+    def __init__(self, ignore_sigint=True):
         use_asyncio_event_loop()
         self.completer = self._make_completer()
+        self.session = None
+        self._ignore_sigint = ignore_sigint
+        self._currently_running_task = None
 
     async def run(self):
-        session = PromptSession()
+        if self._ignore_sigint:
+            asyncio.get_event_loop().add_signal_handler(signal.SIGINT, self._sigint_handler)
+        self.session = PromptSession(enable_history_search=True, key_bindings=self._get_bindings())
+        try:
+            await self._run_prompt_forever()
+        finally:
+            if self._ignore_sigint:
+                asyncio.get_event_loop().remove_signal_handler(signal.SIGINT)
+
+    async def _run_prompt_forever(self):
         while True:
             with patch_stdout():
                 try:
-                    result = await session.prompt(self.PROMPT, async_=True, completer=self.completer)
-                except KeyboardInterrupt:
-                    continue
+                    result = await self.session.prompt(self.prompt, async_=True, completer=self.completer)
                 except EOFError:
                     return
-                except asyncio.CancelledError:
-                    print("CANCELED")
-                if not result:
-                    continue
-                args = result.split()
-                if args[0] in self.command_list:
-                    command_real_args = self._get_command_args(args[0])
-                    if len(command_real_args) != len(args[1:]):
-                        print("Bad command args. Usage: %s %s" % (args[0], " ".join(command_real_args)))
-                        continue
 
-                    try:
-                        self._get_command(args[0])(*args[1:])
-                    except ExitPromptException:
-                        return
-                    except Exception as ex:
-                        print("Command failed: ", ex)
-                else:
-                    print("Command %s not found!" % args[0])
+            if not result:
+                continue
+            args = result.split()
+            if args[0] in self.command_list:
+                try:
+                    self._currently_running_task = asyncio.ensure_future(
+                        self._run_single_command(args[0], args[1:]))
+                    await self._currently_running_task
+                except asyncio.CancelledError:
+                    continue
+                except ExitPromptException:
+                    return
+            else:
+                print("Command %s not found!" % args[0])
+
+    def _sigint_handler(self):
+        if self._currently_running_task:
+            self._currently_running_task.cancel()
+
+    def _get_bindings(self):
+        bindings = KeyBindings()
+        bindings.add("c-c")(lambda event: self._interrupt_handler(event))
+        return bindings
+
+    async def _run_single_command(self, command, args):
+        command_real_args = self._get_command_args(command)
+        if len(command_real_args) != len(args):
+            print("Bad command args. Usage: %s %s" % (command, " ".join(command_real_args)))
+            return
+
+        try:
+            com_func = self._get_command(command)
+            if asyncio.iscoroutinefunction(com_func):
+                await com_func(*args)
+            else:
+                com_func(*args)
+        except asyncio.CancelledError:
+            print()
+            raise
+        except Exception as ex:
+            print("Command failed: ", ex)
+
+    def _interrupt_handler(self, event):
+        event.cli.current_buffer.text = ""
 
     def _make_completer(self):
         return NestedCompleter({com: self._completer_for_command(com) for com in self.command_list})
@@ -84,8 +122,8 @@ class PromptToolkitCmd:
         print()
         for command in sorted(self.command_list):
             command_doc = self._get_command(command).__doc__
-            command_args = "".join(["<%s>" % arg for arg in self._get_command_args(command)])
-            print("%s %s      %s" % (command, command_args, command_doc or ""))
+            command = command + " " + "".join(["<%s>" % arg for arg in self._get_command_args(command)])
+            print('%-30s%s' % (command, command_doc or ""))
 
     def do_quit(self):
         """Exit the prompt"""
