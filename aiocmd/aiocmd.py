@@ -147,10 +147,12 @@ class PromptToolkitCmd:
         print(self.doc_header)
         print("=" * len(self.doc_header))
         print()
+
+        get_usage = lambda command: self._get_command_usage(command, *self._get_command_args(command))
+        max_usage_len = max([len(get_usage(command)) for command in self.command_list])
         for command in sorted(self.command_list):
             command_doc = self._get_command(command).__doc__
-            print('%-30s%s' % (self._get_command_usage(command, *self._get_command_args(command)),
-                               command_doc or ""))
+            print(("%-" + str(max_usage_len + 2) + "s%s") % (get_usage(command), command_doc or ""))
 
     def do_quit(self):
         """Exit the prompt"""
@@ -159,6 +161,3 @@ class PromptToolkitCmd:
     def _on_close(self):
         """Optional hook to call on closing the cmd"""
         pass
-
-    def do_foo(self, x, y=5):
-        print(x, y)
