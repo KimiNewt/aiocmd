@@ -23,6 +23,15 @@ class CommandInterruptedException(Exception):
 
 
 class PromptToolkitCmd:
+    """Baseclass for custom CLIs
+
+    Works similarly to the built-in Cmd class. You can inherit from this class and implement:
+        - do_<action> - This will add the "<action>" command to the cli.
+                        The method may receive arguments (required) and keyword arguments (optional).
+        - _<action>_completions - Returns a custom Completer class to use as a completer for this action.
+    Additionally, the user cant change the "prompt" variable to change how the prompt looks, and add
+    command aliases to the 'aliases' dict.
+    """
     ATTR_START = "do_"
     prompt = "$ "
     doc_header = "Documented commands:"
@@ -80,9 +89,11 @@ class PromptToolkitCmd:
         return bindings
 
     async def _run_single_command(self, command, args):
-        command_real_args = self._get_command_args(command)
-        if len(command_real_args) != len(args):
-            print("Bad command args. Usage: %s %s" % (command, " ".join(command_real_args)))
+        command_real_args, command_real_kwargs = self._get_command_args(command)
+        if len(args) < len(command_real_args) or len(args) > (len(command_real_args)
+                                                              + len(command_real_kwargs)):
+            print("Bad command args. Usage: %s" % self._get_command_usage(command, command_real_args,
+                                                                          command_real_kwargs))
             return
 
         try:
@@ -114,7 +125,17 @@ class PromptToolkitCmd:
         return getattr(self, self.ATTR_START + command)
 
     def _get_command_args(self, command):
-        return list(inspect.signature(self._get_command(command)).parameters.keys())
+        args = [param for param in inspect.signature(self._get_command(command)).parameters.values()
+                if param.default == param.empty]
+        kwargs = [param for param in inspect.signature(self._get_command(command)).parameters.values()
+                  if param.default != param.empty]
+        return args, kwargs
+
+    def _get_command_usage(self, command, args, kwargs):
+        return ("%s %s %s" % (command,
+                              " ".join("<%s>" % arg for arg in args),
+                              " ".join("[%s]" % kwarg for kwarg in kwargs),
+                              )).strip()
 
     @property
     def command_list(self):
@@ -128,8 +149,8 @@ class PromptToolkitCmd:
         print()
         for command in sorted(self.command_list):
             command_doc = self._get_command(command).__doc__
-            command = command + " " + "".join(["<%s>" % arg for arg in self._get_command_args(command)])
-            print('%-30s%s' % (command, command_doc or ""))
+            print('%-30s%s' % (self._get_command_usage(command, *self._get_command_args(command)),
+                               command_doc or ""))
 
     def do_quit(self):
         """Exit the prompt"""
@@ -138,3 +159,6 @@ class PromptToolkitCmd:
     def _on_close(self):
         """Optional hook to call on closing the cmd"""
         pass
+
+    def do_foo(self, x, y=5):
+        print(x, y)
