@@ -18,10 +18,6 @@ class ExitPromptException(Exception):
     pass
 
 
-class CommandInterruptedException(Exception):
-    pass
-
-
 class PromptToolkitCmd:
     """Baseclass for custom CLIs
 
@@ -71,7 +67,7 @@ class PromptToolkitCmd:
                     self._currently_running_task = asyncio.ensure_future(
                         self._run_single_command(args[0], args[1:]))
                     await self._currently_running_task
-                except CommandInterruptedException:
+                except asyncio.CancelledError:
                     print()
                     continue
                 except ExitPromptException:
@@ -81,7 +77,7 @@ class PromptToolkitCmd:
 
     def _sigint_handler(self):
         if self._currently_running_task:
-            self._currently_running_task.set_exception(CommandInterruptedException)
+            self._currently_running_task.cancel()
 
     def _get_bindings(self):
         bindings = KeyBindings()
@@ -103,7 +99,7 @@ class PromptToolkitCmd:
             else:
                 com_func(*args)
             return
-        except (ExitPromptException, CommandInterruptedException):
+        except (ExitPromptException, asyncio.CancelledError):
             raise
         except Exception as ex:
             print("Command failed: ", ex)
@@ -161,3 +157,6 @@ class PromptToolkitCmd:
     def _on_close(self):
         """Optional hook to call on closing the cmd"""
         pass
+
+    async def do_foo(self):
+        await asyncio.sleep(15)
