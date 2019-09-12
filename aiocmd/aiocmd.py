@@ -157,6 +157,3 @@ class PromptToolkitCmd:
     def _on_close(self):
         """Optional hook to call on closing the cmd"""
         pass
-
-    async def do_foo(self):
-        await asyncio.sleep(15)
