@@ -33,6 +33,10 @@ if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(MyCLI().run())
 ``` 
 
+Will create this CLI:
+
+![CLIImage](./docs/image1.png)
+
 ## Extra features
 
 You can implement a custom completion for each command by implementing `_<action>_completions`. 
@@ -46,4 +50,6 @@ class MyCLI(aiocmd.PromptToolkitCmd):
         return WordCompleter([str(i) for i in range(9)])
 ```
 
-You can also set a custom `prompt` and `aliases` parameters for the class (see classdoc).
+![CLIImage](./docs/image2.png)
+
+You can also set a custom `prompt` and `aliases` parameters for the class (example in docs).
