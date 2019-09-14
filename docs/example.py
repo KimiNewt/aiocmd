@@ -7,6 +7,11 @@ from aiocmd import aiocmd
 
 class MyCLI(aiocmd.PromptToolkitCmd):
 
+    def __init__(self, my_name="My CLI"):
+        super().__init__()
+        self.prompt = "%s $ " % my_name
+        self.aliases["nap"] = "sleep"
+
     def do_my_action(self):
         """This will appear in help text"""
         print("You ran my action!")
