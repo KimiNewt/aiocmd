@@ -23,10 +23,10 @@ class MyCLI(aiocmd.PromptToolkitCmd):
         print("You ran my action!")
         
     def do_add(self, x, y):
-        print(x + y)
-        
-    async def sleep(self, sleep_time=1):
-        await asyncio.sleep(sleep_time)
+        print(int(x) + int(y))
+
+    async def do_sleep(self, sleep_time=1):
+        await asyncio.sleep(int(sleep_time))
         
         
 if __name__ == "__main__":

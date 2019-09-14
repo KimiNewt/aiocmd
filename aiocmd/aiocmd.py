@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import signal
+import sys
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
@@ -41,14 +42,14 @@ class PromptToolkitCmd:
         self._currently_running_task = None
 
     async def run(self):
-        if self._ignore_sigint:
+        if self._ignore_sigint and sys.platform != "win32":
             asyncio.get_event_loop().add_signal_handler(signal.SIGINT, self._sigint_handler)
         self.session = PromptSession(enable_history_search=True, key_bindings=self._get_bindings())
         try:
             with patch_stdout():
                 await self._run_prompt_forever()
         finally:
-            if self._ignore_sigint:
+            if self._ignore_sigint and sys.platform != "win32":
                 asyncio.get_event_loop().remove_signal_handler(signal.SIGINT)
             self._on_close()
 
