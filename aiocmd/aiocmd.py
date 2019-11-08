@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import shlex
 import signal
 import sys
 
@@ -62,7 +63,7 @@ class PromptToolkitCmd:
 
             if not result:
                 continue
-            args = result.split()
+            args = shlex.split(result)
             if args[0] in self.command_list:
                 try:
                     self._currently_running_task = asyncio.ensure_future(

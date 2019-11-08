@@ -19,6 +19,9 @@ class MyCLI(aiocmd.PromptToolkitCmd):
     def do_add(self, x, y):
         print(int(x) + int(y))
 
+    def do_echo(self, to_echo):
+        print(to_echo)
+
     async def do_sleep(self, sleep_time=1):
         await asyncio.sleep(int(sleep_time))
 
