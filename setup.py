@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='aiocmd',
       packages=find_packages("."),
-      version='0.1.3',
+      version='0.1.4',
       author='Dor Green',
       author_email='dorgreen1@gmail.com',
       description='Coroutine-based CLI generator using prompt_toolkit',
