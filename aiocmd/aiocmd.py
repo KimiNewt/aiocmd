@@ -4,6 +4,8 @@ import shlex
 import signal
 import sys
 
+import packaging.version
+import prompt_toolkit
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.key_binding import KeyBindings
@@ -13,7 +15,10 @@ try:
     from prompt_toolkit.completion.nested import NestedCompleter
 except ImportError:
     from aiocmd.nested_completer import NestedCompleter
-from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
+
+
+def _is_prompt_toolkit3():
+    return packaging.version.parse(prompt_toolkit.__version__) >= packaging.version.parse("3.0")
 
 
 class ExitPromptException(Exception):
@@ -36,7 +41,6 @@ class PromptToolkitCmd:
     aliases = {"?": "help", "exit": "quit"}
 
     def __init__(self, ignore_sigint=True):
-        use_asyncio_event_loop()
         self.completer = self._make_completer()
         self.session = None
         self._ignore_sigint = ignore_sigint
@@ -57,7 +61,14 @@ class PromptToolkitCmd:
     async def _run_prompt_forever(self):
         while True:
             try:
-                result = await self.session.prompt(self.prompt, async_=True, completer=self.completer)
+                if _is_prompt_toolkit3():
+                    result = await self.session.prompt_async(self.prompt, completer=self.completer)
+                else:
+                    # This is done because old versions of prompt toolkit don't support Python 3.5.
+                    # When we deprecate 3.5, this can be removed.
+                    from prompt_toolkit.eventloop import use_asyncio_event_loop
+                    use_asyncio_event_loop()
+                    result = await self.session.prompt(self.prompt, async_=True, completer=self.completer)
             except EOFError:
                 return
 

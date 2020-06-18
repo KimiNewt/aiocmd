@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(name='aiocmd',
       packages=find_packages("."),
-      version='0.1.4',
+      version='0.1.5',
       author='Dor Green',
       author_email='dorgreen1@gmail.com',
       description='Coroutine-based CLI generator using prompt_toolkit',
@@ -10,7 +10,7 @@ setup(name='aiocmd',
       keywords=['asyncio', 'cmd'],
       license='MIT',
       install_requires=[
-          'prompt_toolkit>=2.0.9'
+          'prompt_toolkit>=2.0.9', 'packaging'
       ],
       classifiers=[
           'License :: OSI Approved :: MIT License',
